@@ -1,7 +1,7 @@
-// app.js - Main application entry point
-console.log('Server starting...'); 
+import { fetchSampleUsers } from './api.js';
+import { formatDate, validateTask, mergeTaskUpdate, createTask } from './utils.js';
 
-import { formatDate, validateTask, mergeTaskUpdate } from './utils.js';
+console.log('Server starting...'); 
 
 console.log(formatDate(new Date("2026-07-22")));
 
@@ -20,3 +20,21 @@ console.log(
         { title: "New"}
     )
 );
+
+try {
+    console.log('\n--- Fetching Sample Users ---');
+    const users = await fetchSampleUsers();
+    console.log('Sample Users Result:', users);
+
+    console.log('\n--- Attempting Task Creation ---');
+    const sampleTaskData = {
+        title: "Fix Cracking Shoulder",
+        dueDate: "2026-07-25"
+    };
+    
+    const newTask = createTask(sampleTaskData);
+    console.log('Successfully Created Task:', newTask);
+
+} catch (error) {
+    console.error('An error occurred during app execution:', error.message);
+}
