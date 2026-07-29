@@ -26,3 +26,9 @@ export const createTask = (taskData) => {
         ...taskData
     };
 }
+
+export const mockTasks = [
+    { id: 1, title: "Finish Assignment", dueDate: "2026-07-22", completed: false },
+    { id: 2, title: "Review Pull Request", dueDate: "2026-07-24", completed: true },
+    { id: 3, title: "Fix Cracking Shoulder", dueDate: "2026-07-25", completed: false },
+];
