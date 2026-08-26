@@ -1,95 +1,117 @@
 import { Router } from 'express';
-import { mockTasks, validateTask, mergeTaskUpdate } from '../utils.js';
-import { fetchSampleUsers } from '../api.js';
+import { validateTask, mergeTaskUpdate } from '../utils.js';
+import db from '../../models/index.cjs';
+
+const { Task, User } = db;
 
 const router = Router();
 
-// Cached users -- populated once when the server starts (see initUsers below),
-// not re-fetched on every request to /api/users.
-let cachedUsers = [];
-
-export const initUsers = async () => {
-    cachedUsers = await fetchSampleUsers();
-    console.log(`Cached ${cachedUsers.length} users at startup.`);
-};
-
-// GET /api/tasks -- returns the mock task array
-router.get('/tasks', (req, res) => {
-    res.json(mockTasks);
+// GET /api/tasks -- required JOIN query, returns each task with its owning user
+router.get('/tasks', async (req, res) => {
+    try {
+        const tasks = await Task.findAll({ include: User });
+        res.json(tasks);
+    } catch (error) {
+        console.error('Error fetching tasks:', error);
+        res.status(500).json({ error: 'Failed to fetch tasks' });
+    }
 });
 
 // GET /api/tasks/:id -- returns the single matching task, or 404 if none found
-router.get('/tasks/:id', (req, res) => {
+router.get('/tasks/:id', async (req, res) => {
     const { id } = req.params;
-    const task = mockTasks.find((t) => String(t.id) === String(id));
 
-    if (!task) {
-        return res.status(404).json({ error: `Task with id ${id} not found` });
+    try {
+        const task = await Task.findByPk(id);
+
+        if (!task) {
+            return res.status(404).json({ error: `Task with id ${id} not found` });
+        }
+
+        res.json(task);
+    } catch (error) {
+        console.error('Error fetching task:', error);
+        res.status(500).json({ error: 'Failed to fetch task' });
     }
-
-    res.json(task);
 });
 
 // POST /api/tasks -- validates the request body with validateTask(), then
-// creates and stores a new task. 400 if invalid, 201 with the new task if valid.
-router.post('/tasks', (req, res) => {
+// creates a new task via Sequelize. 400 if invalid, 201 with the new task if valid.
+router.post('/tasks', async (req, res) => {
     const taskData = req.body;
 
     if (!validateTask(taskData)) {
         return res.status(400).json({ error: 'Invalid task data: title and dueDate are required' });
     }
 
-    const nextId = mockTasks.length
-        ? Math.max(...mockTasks.map((t) => t.id)) + 1
-        : 1;
+    try {
+        const newTask = await Task.create({
+            completed: false,
+            ...taskData,
+        });
 
-    const newTask = {
-        id: nextId,
-        completed: false,
-        ...taskData,
-    };
-
-    mockTasks.push(newTask);
-    res.status(201).json(newTask);
+        res.status(201).json(newTask);
+    } catch (error) {
+        console.error('Error creating task:', error);
+        res.status(400).json({ error: 'Failed to create task' });
+    }
 });
 
 // PUT /api/tasks/:id -- finds the task by id (404 if missing), applies the
 // update with mergeTaskUpdate(), and returns the merged task with 200.
-router.put('/tasks/:id', (req, res) => {
+router.put('/tasks/:id', async (req, res) => {
     const { id } = req.params;
-    const taskIndex = mockTasks.findIndex((t) => String(t.id) === String(id));
 
-    if (taskIndex === -1) {
-        return res.status(404).json({ error: `Task with id ${id} not found` });
+    try {
+        const task = await Task.findByPk(id);
+
+        if (!task) {
+            return res.status(404).json({ error: `Task with id ${id} not found` });
+        }
+
+        const mergedData = mergeTaskUpdate(task.toJSON(), req.body);
+        await task.update(mergedData);
+
+        res.status(200).json(task);
+    } catch (error) {
+        console.error('Error updating task:', error);
+        res.status(400).json({ error: 'Failed to update task' });
     }
-
-    const updatedTask = mergeTaskUpdate(mockTasks[taskIndex], req.body);
-    mockTasks[taskIndex] = updatedTask;
-
-    res.status(200).json(updatedTask);
 });
 
 // DELETE /api/tasks/:id -- 404 if no task matches, otherwise removes it and
 // returns 200 with a confirmation message.
-router.delete('/tasks/:id', (req, res) => {
+router.delete('/tasks/:id', async (req, res) => {
     const { id } = req.params;
-    const taskIndex = mockTasks.findIndex((t) => String(t.id) === String(id));
 
-    if (taskIndex === -1) {
-        return res.status(404).json({ error: `Task with id ${id} not found` });
+    try {
+        const task = await Task.findByPk(id);
+
+        if (!task) {
+            return res.status(404).json({ error: `Task with id ${id} not found` });
+        }
+
+        await task.destroy();
+
+        res.status(200).json({
+            message: `Task with id ${id} deleted successfully`,
+            task,
+        });
+    } catch (error) {
+        console.error('Error deleting task:', error);
+        res.status(500).json({ error: 'Failed to delete task' });
     }
-
-    const [deletedTask] = mockTasks.splice(taskIndex, 1);
-
-    res.status(200).json({
-        message: `Task with id ${id} deleted successfully`,
-        task: deletedTask,
-    });
 });
 
-// GET /api/users -- returns the cached, transformed { id, name, email } user list
-router.get('/users', (req, res) => {
-    res.json(cachedUsers);
+// GET /api/users -- now backed by PostgreSQL instead of the jsonplaceholder mock fetch
+router.get('/users', async (req, res) => {
+    try {
+        const users = await User.findAll();
+        res.json(users);
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
 });
 
 export default router;
