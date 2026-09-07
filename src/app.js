@@ -37,4 +37,4 @@ try {
 
 } catch (error) {
     console.error('An error occurred during app execution:', error.message);
-}
+} // Sept 7, 2026 ITElect2 Midterms
