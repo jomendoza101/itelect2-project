@@ -4,10 +4,13 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     // 1. Insert 3 Users
+    const bcrypt = require('bcryptjs');
+    const defaultPassword = await bcrypt.hash('password123', 10);
+
     await queryInterface.bulkInsert('Users', [
-      { name: 'Alice Smith', email: 'alice@example.com', createdAt: new Date(), updatedAt: new Date() },
-      { name: 'Bob Jones', email: 'bob@example.com', createdAt: new Date(), updatedAt: new Date() },
-      { name: 'Charlie Brown', email: 'charlie@example.com', createdAt: new Date(), updatedAt: new Date() }
+      { email: 'alice@example.com', password: defaultPassword, role: 'member', createdAt: new Date(), updatedAt: new Date() },
+      { email: 'bob@example.com', password: defaultPassword, role: 'member', createdAt: new Date(), updatedAt: new Date() },
+      { email: 'charlie@example.com', password: defaultPassword, role: 'member', createdAt: new Date(), updatedAt: new Date() }
     ]);
 
     // 2. Fetch the dynamically generated user IDs directly from Postgres
