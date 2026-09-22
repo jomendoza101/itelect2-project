@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { validateTask, mergeTaskUpdate } from '../utils.js';
 import db from '../../models/index.cjs';
+import verifyToken from '../../middleware/verifyToken.js';
+import requireRole from '../../middleware/requireRole.js';
 
 const { Task, User } = db;
 
 const router = Router();
 
-// GET /api/tasks -- required JOIN query, returns each task with its owning user
+// GET /api/tasks -- returns each task with its owning user
 router.get('/tasks', async (req, res) => {
     try {
         const tasks = await Task.findAll({ include: User });
@@ -17,7 +19,7 @@ router.get('/tasks', async (req, res) => {
     }
 });
 
-// GET /api/tasks/:id -- returns the single matching task, or 404 if none found
+// GET /api/tasks/:id -- returns single matching task
 router.get('/tasks/:id', async (req, res) => {
     const { id } = req.params;
 
@@ -35,9 +37,8 @@ router.get('/tasks/:id', async (req, res) => {
     }
 });
 
-// POST /api/tasks -- validates the request body with validateTask(), then
-// creates a new task via Sequelize. 400 if invalid, 201 with the new task if valid.
-router.post('/tasks', async (req, res) => {
+// POST /api/tasks -- Protected with verifyToken
+router.post('/tasks', verifyToken, async (req, res) => {
     const taskData = req.body;
 
     if (!validateTask(taskData)) {
@@ -57,9 +58,8 @@ router.post('/tasks', async (req, res) => {
     }
 });
 
-// PUT /api/tasks/:id -- finds the task by id (404 if missing), applies the
-// update with mergeTaskUpdate(), and returns the merged task with 200.
-router.put('/tasks/:id', async (req, res) => {
+// PUT /api/tasks/:id -- Protected with verifyToken
+router.put('/tasks/:id', verifyToken, async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -79,9 +79,8 @@ router.put('/tasks/:id', async (req, res) => {
     }
 });
 
-// DELETE /api/tasks/:id -- 404 if no task matches, otherwise removes it and
-// returns 200 with a confirmation message.
-router.delete('/tasks/:id', async (req, res) => {
+// DELETE /api/tasks/:id -- Protected with verifyToken AND requireRole('admin')
+router.delete('/tasks/:id', verifyToken, requireRole('admin'), async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -103,7 +102,7 @@ router.delete('/tasks/:id', async (req, res) => {
     }
 });
 
-// GET /api/users -- now backed by PostgreSQL instead of the jsonplaceholder mock fetch
+// GET /api/users
 router.get('/users', async (req, res) => {
     try {
         const users = await User.findAll();
