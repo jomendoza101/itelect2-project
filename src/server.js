@@ -2,7 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import router from './routes/index.js';
+// 1. Changed from './routes/index.js' to the new file you created
+import taskRouter from './routes/tasks.js';
 import authRouter from './routes/auth.cjs'; 
 
 const app = express();
@@ -13,7 +14,8 @@ const startServer = async () => {
     app.use(morgan('dev'));
     app.use(express.json());
 
-    app.use('/api', router);
+    // 2. Updated to use taskRouter instead of the old router
+    app.use('/api', taskRouter);
     app.use('/api/auth', authRouter); 
 
     app.use((err, req, res, next) => {
