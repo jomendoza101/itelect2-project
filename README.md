@@ -34,3 +34,6 @@ My IT Elective 2 backend web development project.
 
 #### DELETE /tasks
 ![alt text](image-9.png)
+
+#### Live URL
+https://itelect2-project-jthu.onrender.com
